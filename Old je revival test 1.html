@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Julian's Editor - v0.80 revival</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #55D0EB;
+        }
+        .screen {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #55D0EB;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            display: none;
+        }
+        .screen.active {
+            display: flex;
+        }
+        #loading-screen, #signin-screen, #game-screen {
+            background-color: #ffffff;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: #000;
+        }
+        #loading-screen {
+            flex-direction: column;
+            gap: 15px;
+        }
+        #signin-screen {
+            flex-direction: column;
+            justify-content: flex-start;
+            padding-top: 60px;
+        }
+        #game-screen {
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: stretch;
+            background-color: #f0f0f0;
+        }
+        .sidebar {
+            width: 320px;
+            background-color: #2c3e50;
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-right: 4px solid #000;
+            font-size: 16px;
+        }
+        .sidebar h3 {
+            font-size: 18px;
+            border-bottom: 2px solid #fff;
+            padding-bottom: 6px;
+        }
+        .account-counter {
+            font-size: 14px;
+            background-color: #1abc9c;
+            color: #000;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .search-box {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 2px solid #000;
+            border-radius: 4px;
+            outline: none;
+        }
+        .player-list {
+            list-style-type: none;
+            overflow-y: auto;
+            max-height: calc(100vh - 220px);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .player-item {
+            background-color: #34495e;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            border: 1px solid #7f8c8d;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .player-item button {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .player-item button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+        }
+        .player-item button:active:not(:disabled) {
+            opacity: 0.8;
+        }
+        .game-main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            background-color: #ffffff;
+            gap: 15px;
+        }
+        .notification-banner {
+            background-color: #f1c40f;
+            color: #000;
+            padding: 10px 20px;
+            border: 2px solid #000;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            display: none;
+            max-width: 400px;
+            text-align: center;
+        }
+        .account-title {
+            font-size: 24px;
+            margin-bottom: 25px;
+            text-align: center;
+            padding: 0 20px;
+        }
+        .account-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 320px;
+        }
+        .account-form input {
+            padding: 12px;
+            font-size: 16px;
+            border: 3px solid #000;
+            border-radius: 8px;
+            outline: none;
+        }
+        .account-form button {
+            background-color: #61ed9c;
+            color: #000;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 12px;
+            border: 3px solid #000;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .account-form button:active {
+            opacity: 0.8;
+        }
+        .error-msg {
+            color: red;
+            font-size: 14px;
+            text-align: center;
+            height: 20px;
+        }
+        .mode-switch-text {
+            font-size: 15px;
+            text-align: center;
+            margin-top: 5px;
+            font-weight: normal;
+        }
+        .mode-switch-text span {
+            color: #0066cc;
+            text-decoration: underline;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: #ddd;
+            color: #000;
+            border: 2px solid #000;
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .back-btn:active {
+            opacity: 0.8;
+        }
+        .logo-container {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+        .logo-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .julianseditor-logo {
+            width: 300px;
+            height: auto;
+            transform: rotate(0deg);
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        @keyframes rainbow {
+            0% { filter: hue-rotate(0deg); }
+            100% { filter: hue-rotate(360deg); }
+        }
+        .version-container {
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #fff;
+            padding: 3px 6px;
+            border-radius: 4px;
+            border: 2px solid #000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .version-text {
+            font-size: 14px;
+            font-weight: bold;
+            background: linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: rainbow 0.8s linear infinite;
+        }
+        .start-btn-container {
+            position: absolute;
+            top: 67%;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 10;
+        }
+        .start-btn {
+            background-color: #61ed9c;
+            color: #000;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 14px 0;
+            width: 250px;
+            text-align: center;
+            border: 4px solid #000;
+            border-radius: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: none;
+            transition: opacity 0.1s ease;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .start-btn:active {
+            opacity: 0.8;
+        }
+        .footer-fence {
+            width: 100%;
+            height: 240px;
+            background: url('https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/JE-REVIVAL_0.8.0/refs/heads/main/bb8594fa-da3d-4f6c-9d73-1ce6911b4650.6c373.png') no-repeat bottom center;
+            background-size: cover;
+            z-index: 5;
+        }
+        /* Modal Popup for Friend Request */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            display: none;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 30px;
+            border: 4px solid #000;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 350px;
+            text-align: center;
+            font-size: 20px;
+            color: #000;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+        }
+        .modal-buttons button {
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 3px solid #000;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .btn-yes { background-color: #61ed9c; }
+        .btn-no { background-color: #ff6b6b; }
+    </style>
+</head>
+<body>
+
+    <!-- Main Menu Screen -->
+    <div class="screen active" id="main-screen">
+        <div class="logo-container">
+            <div class="logo-wrapper">
+                <img src="https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/JE-REVIVAL_0.8.0/refs/heads/main/c7382f33-459f-41ec-b459-72ce6dc90f09.703ff.png" alt="Julian's Editor" class="julianseditor-logo">
+                <div class="version-container">
+                    <div class="version-text">v0.8.0</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="start-btn-container">
+            <button class="start-btn" id="start-trigger">Start!</button>
+        </div>
+
+        <div class="footer-fence"></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="screen" id="loading-screen">
+        <div>Loading game... .</div>
+        <div id="loading-percentage">0%</div>
+    </div>
+
+    <!-- Sign Up & Sign In Combined Screen -->
+    <div class="screen" id="signin-screen">
+        <button class="back-btn" id="signin-back">Back</button>
+        <div class="account-title" id="auth-title">Make your julians editor account to play</div>
+        <form class="account-form" id="auth-form">
+            <input type="text" id="auth-identifier" placeholder="Username (5-10 chars)" required>
+            <input type="password" id="auth-password" placeholder="Password (5-10 chars)" required>
+            <div class="error-msg" id="auth-error"></div>
+            <button type="submit" id="auth-submit-btn">Create Account & Play</button>
+            <div class="mode-switch-text" id="mode-switch-container">
+                Already have an account? <span id="mode-switch-link">log in here</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Game Screen with Node Server Sidebar Tracking -->
+    <div class="screen" id="game-screen">
+        <div class="sidebar">
+            <h3>Node Server</h3>
+            <div class="account-counter" id="account-counter-display">Global Registered Accounts: 0</div>
+            <input type="text" class="search-box" id="player-search" placeholder="Search other accounts...">
+            <ul class="player-list" id="server-player-list">
+                <!-- Populated dynamically -->
+            </ul>
+        </div>
+        <div class="game-main-content">
+            <button class="back-btn" id="game-back">Back</button>
+            <div class="notification-banner" id="notif-banner">Notification message goes here</div>
+            <div id="welcome-message" style="font-size: 30px; font-weight: bold;">Placeholder</div>
+        </div>
+    </div>
+
+    <!-- Friend Request Pop-up Modal -->
+    <div class="modal-overlay" id="friend-modal">
+        <div class="modal-content">
+            <div id="modal-text">User wants to be friends with you</div>
+            <div class="modal-buttons">
+                <button class="btn-yes" id="modal-yes">Yes</button>
+                <button class="btn-no" id="modal-no">No</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const mainScreen = document.getElementById('main-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const signinScreen = document.getElementById('signin-screen');
+        const gameScreen = document.getElementById('game-screen');
+
+        const startBtn = document.getElementById('start-trigger');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const authIdentifier = document.getElementById('auth-identifier');
+        const authPassword = document.getElementById('auth-password');
+        const authError = document.getElementById('auth-error');
+        const authSubmitBtn = document.getElementById('auth-submit-btn');
+        const modeSwitchContainer = document.getElementById('mode-switch-container');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const serverPlayerList = document.getElementById('server-player-list');
+        const accountCounterDisplay = document.getElementById('account-counter-display');
+        const playerSearch = document.getElementById('player-search');
+        const notifBanner = document.getElementById('notif-banner');
+
+        const friendModal = document.getElementById('friend-modal');
+        const modalText = document.getElementById('modal-text');
+        const modalYes = document.getElementById('modal-yes');
+        const modalNo = document.getElementById('modal-no');
+
+        const loadingPercentage = document.getElementById('loading-percentage');
+        const signinBack = document.getElementById('signin-back');
+        const gameBack = document.getElementById('game-back');
+
+        let isSignUpMode = true;
+        let currentLoggedInUser = null;
+        let activePollTimer = null;
+
+        function getRegisteredAccounts() {
+            let accounts = localStorage.getItem('je_server_database');
+            if (!accounts) {
+                accounts = [];
+                localStorage.setItem('je_server_database', JSON.stringify(accounts));
+            }
+            return JSON.parse(accounts);
+        }
+
+        function saveAccountsToDatabase(accounts) {
+            localStorage.setItem('je_server_database', JSON.stringify(accounts));
+        }
+
+        function getMyLocalAccounts() {
+            let localAccs = localStorage.getItem('je_my_local_creations');
+            if (!localAccs) {
+                localAccs = [];
+                localStorage.setItem('je_my_local_creations', JSON.stringify(localAccs));
+            }
+            return JSON.parse(localAccs);
+        }
+
+        function saveMyLocalAccounts(localAccs) {
+            localStorage.setItem('je_my_local_creations', JSON.stringify(localAccs));
+        }
+
+        function updateSidebarNodeView(filterText = '') {
+            const accounts = getRegisteredAccounts();
+            const myLocalAccs = getMyLocalAccounts();
+
+            accountCounterDisplay.textContent = `Global Registered Accounts: ${accounts.length}`;
+            serverPlayerList.innerHTML = '';
+
+            // Filter out accounts that belong to this device's created list
+            const otherAccounts = accounts.filter(acc => !myLocalAccs.includes(acc.user));
+            const filtered = otherAccounts.filter(acc => acc.user.toLowerCase().includes(filterText.toLowerCase()));
+
+            filtered.forEach(acc => {
+                const li = document.createElement('li');
+                li.className = 'player-item';
+                
+                let actionHtml = '';
+                if (currentLoggedInUser && acc.user !== currentLoggedInUser.user) {
+                    const targetAcc = accounts.find(a => a.user === acc.user);
+                    const alreadyRequested = targetAcc && targetAcc.friendRequests && targetAcc.friendRequests.includes(currentLoggedInUser.user);
+                    const alreadyFriends = targetAcc && targetAcc.friends && targetAcc.friends.includes(currentLoggedInUser.user);
+
+                    if (alreadyFriends) {
+                        actionHtml = `<button disabled>Friends</button>`;
+                    } else if (alreadyRequested) {
+                        actionHtml = `<button disabled>Request Sent</button>`;
+                    } else {
+                        actionHtml = `<button onclick="sendFriendRequest('${acc.user}')">Add Friend</button>`;
+                    }
+                } else if (!currentLoggedInUser) {
+                    actionHtml = `<span style="font-size:11px; color:#bdc3c7;">Code: #${acc.id} (${acc.date})</span>`;
+                }
+
+                li.innerHTML = `
+                    <div><strong>${acc.user}</strong></div>
+                    <div style="font-size: 11px; color: #bdc3c7;">Code: #${acc.id} | Made: ${acc.date}</div>
+                    ${actionHtml}
+                `;
+                serverPlayerList.appendChild(li);
+            });
+        }
+
+        window.sendFriendRequest = function(targetUser) {
+            let accounts = getRegisteredAccounts();
+            let targetObj = accounts.find(a => a.user === targetUser);
+            if (targetObj) {
+                if (!targetObj.friendRequests) targetObj.friendRequests = [];
+                if (!targetObj.friendRequests.includes(currentLoggedInUser.user)) {
+                    targetObj.friendRequests.push(currentLoggedInUser.user);
+                    saveAccountsToDatabase(accounts);
+                    updateSidebarNodeView(playerSearch.value);
+                    showNotification(`Friend request sent to ${targetUser}!`);
+                }
+            }
+        };
+
+        function showNotification(text) {
+            notifBanner.textContent = text;
+            notifBanner.style.display = 'block';
+            setTimeout(() => {
+                notifBanner.style.display = 'none';
+            }, 4000);
+        }
+
+        function checkServerUpdates() {
+            if (!currentLoggedInUser) return;
+            
+            let accounts = getRegisteredAccounts();
+            let freshSelf = accounts.find(a => a.user === currentLoggedInUser.user);
+            if (!freshSelf) return;
+
+            currentLoggedInUser = freshSelf;
+
+            if (freshSelf.friendRequests && freshSelf.friendRequests.length > 0) {
+                const requester = freshSelf.friendRequests.shift();
+                saveAccountsToDatabase(accounts);
+
+                modalText.textContent = `${requester} wants to be friends with you`;
+                friendModal.style.display = 'flex';
+
+                modalYes.onclick = () => {
+                    friendModal.style.display = 'none';
+                    let currentAccs = getRegisteredAccounts();
+                    let me = currentAccs.find(a => a.user === currentLoggedInUser.user);
+                    let other = currentAccs.find(a => a.user === requester);
+
+                    if (!me.friends) me.friends = [];
+                    if (!me.friends.includes(requester)) me.friends.push(requester);
+
+                    if (other) {
+                        if (!other.friends) other.friends = [];
+                        if (!other.friends.includes(me.user)) other.friends.push(me.user);
+                        if (!other.notifications) other.notifications = [];
+                        other.notifications.push(`You are now friends with ${me.user}`);
+                    }
+                    saveAccountsToDatabase(currentAccs);
+                    updateSidebarNodeView(playerSearch.value);
+                };
+
+                modalNo.onclick = () => {
+                    friendModal.style.display = 'none';
+                    let currentAccs = getRegisteredAccounts();
+                    let other = currentAccs.find(a => a.user === requester);
+                    if (other) {
+                        if (!other.notifications) other.notifications = [];
+                        other.notifications.push(`${currentLoggedInUser.user} declined your offer`);
+                    }
+                    saveAccountsToDatabase(currentAccs);
+                    updateSidebarNodeView(playerSearch.value);
+                };
+            }
+
+            if (freshSelf.notifications && freshSelf.notifications.length > 0) {
+                const note = freshSelf.notifications.shift();
+                saveAccountsToDatabase(accounts);
+                showNotification(note);
+                updateSidebarNodeView(playerSearch.value);
+            }
+        }
+
+        playerSearch.addEventListener('input', (e) => {
+            updateSidebarNodeView(e.target.value);
+        });
+
+        function switchScreen(targetScreen) {
+            mainScreen.classList.remove('active');
+            loadingScreen.classList.remove('active');
+            signinScreen.classList.remove('active');
+            gameScreen.classList.remove('active');
+
+            targetScreen.classList.add('active');
+        }
+
+        function setAuthMode(signUp) {
+            isSignUpMode = signUp;
+            authError.textContent = '';
+            authIdentifier.value = '';
+            authPassword.value = '';
+            if (isSignUpMode) {
+                authTitle.textContent = 'Make your julians editor account to play';
+                authIdentifier.placeholder = 'Username (5-10 chars)';
+                authPassword.placeholder = 'Password (5-10 chars)';
+                authSubmitBtn.textContent = 'Create Account & Play';
+                modeSwitchContainer.innerHTML = 'Already have an account? <span id="mode-switch-link">log in here</span>';
+            } else {
+                authTitle.textContent = 'Put your username or password to log in';
+                authIdentifier.placeholder = 'Username';
+                authPassword.placeholder = 'Password';
+                authSubmitBtn.textContent = 'Log In';
+                modeSwitchContainer.innerHTML = 'Don\'t have an account? <span id="mode-switch-link">Sign Up</span>';
+            }
+            document.getElementById('mode-switch-link').addEventListener('click', toggleAuthMode);
+        }
+
+        function toggleAuthMode() {
+            setAuthMode(!isSignUpMode);
+        }
+
+        document.getElementById('mode-switch-link').addEventListener('click', toggleAuthMode);
+
+        function handleStartTrigger(e) {
+            e.preventDefault();
+            switchScreen(loadingScreen);
+            
+            let currentPercent = 0;
+            loadingPercentage.textContent = currentPercent + '%';
+            
+            const intervalTime = 40;
+            const totalDuration = 4000;
+            const increment = 100 / (totalDuration / intervalTime);
+
+            const timer = setInterval(() => {
+                currentPercent += increment;
+                if (currentPercent >= 100) {
+                    currentPercent = 100;
+                    clearInterval(timer);
+                    setAuthMode(true);
+                    switchScreen(signinScreen);
+                }
+                loadingPercentage.textContent = Math.floor(currentPercent) + '%';
+            }, intervalTime);
+        }
+
+        startBtn.addEventListener('click', handleStartTrigger);
+        startBtn.addEventListener('touchend', handleStartTrigger);
+
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const identifier = authIdentifier.value.trim();
+            const password = authPassword.value.trim();
+            const accounts = getRegisteredAccounts();
+
+            if (isSignUpMode) {
+                const uLen = identifier.length;
+                const pLen = password.length;
+                if (uLen >= 5 && uLen <= 10 && pLen >= 5 && pLen <= 10) {
+                    // Check if username already exists globally
+                    if (accounts.some(acc => acc.user === identifier)) {
+                        authError.textContent = 'Username already taken!';
+                        return;
+                    }
+
+                    authError.textContent = '';
+                    
+                    const accountId = accounts.length + 1;
+                    const currentDate = new Date().toLocaleDateString();
+                    
+                    const newAccount = { 
+                        user: identifier, 
+                        pass: password, 
+                        id: accountId, 
+                        date: currentDate,
+                        friendRequests: [],
+                        friends: [],
+                        notifications: []
+                    };
+                    
+                    accounts.push(newAccount);
+                    saveAccountsToDatabase(accounts);
+
+                    // Track that this specific account was created on this device so we hide it from its own sidebar view
+                    let myLocalAccs = getMyLocalAccounts();
+                    if (!myLocalAccs.includes(identifier)) {
+                        myLocalAccs.push(identifier);
+                        saveMyLocalAccounts(myLocalAccs);
+                    }
+
+                    currentLoggedInUser = newAccount;
+                    
+                    welcomeMessage.textContent = `Welcome back ${newAccount.user}`;
+                    updateSidebarNodeView();
+                    switchScreen(gameScreen);
+
+                    if (activePollTimer) clearInterval(activePollTimer);
+                    activePollTimer = setInterval(checkServerUpdates, 1000);
+                } else {
+                    authError.textContent = 'Username and Password must be between 5 and 10 characters!';
+                }
+            } else {
+                const foundAccount = accounts.find(acc => acc.user === identifier && acc.pass === password);
+                if (foundAccount) {
+                    authError.textContent = '';
+                    currentLoggedInUser = foundAccount;
+                    
+                    welcomeMessage.textContent = `Welcome back ${foundAccount.user}`;
+                    updateSidebarNodeView();
+                    switchScreen(gameScreen);
+
+                    if (activePollTimer) clearInterval(activePollTimer);
+                    activePollTimer = setInterval(checkServerUpdates, 1000);
+                } else {
+                    authError.textContent = 'Account not found. Please sign up first!';
+                }
+            }
+        });
+
+        signinBack.addEventListener('click', () => {
+            if (isSignUpMode) {
+                switchScreen(mainScreen);
+            } else {
+                setAuthMode(true);
+            }
+        });
+
+        gameBack.addEventListener('click', () => {
+            if (activePollTimer) clearInterval(activePollTimer);
+            currentLoggedInUser = null;
+            setAuthMode(true);
+            switchScreen(signinScreen);
+        });
+
+        updateSidebarNodeView();
+    </script>
+
+</body>
+</html>
